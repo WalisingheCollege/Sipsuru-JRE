@@ -1,0 +1,53 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
+
+name: Build Sipsuru JRE
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    env:
+      JDK_VERSION: '22'
+      JDK_DISTRIBUTION: 'oracle'
+      OUTPUT_DIR: Sipsuru-JRE-${{ matrix.os }}
+      OPTIONS_FILE: ${{ matrix.os }}-jlink-config
+      MODULES: java.base,java.desktop
+      COMPRESS_LEVEL: zip-9
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Oracle JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JDK_VERSION }}
+          distribution: ${{ env.JDK_DISTRIBUTION }}
+
+      - name: Create Sipsuru JRE for ${{ matrix.os }}
+        run: jlink --module-path ${{ env.JAVA_HOME }}/jmods --add-modules ${{ env.MODULES }} --output ${{ env.OUTPUT_DIR }} --strip-debug --compress ${{ env.COMPRESS_LEVEL }} --no-header-files --no-man-pages --save-opts ${{ env.OPTIONS_FILE }}
+
+      # Archieve JREs according to OS  
+      - name: Archive Sipsuru JRE for ${{ matrix.os }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUTPUT_DIR }}-${{ github.run_id }}
+          path: ${{ env.OUTPUT_DIR }}
+
+      - name: Archive JLink Config for ${{ matrix.os }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OPTIONS_FILE }}-${{ github.run_id }}.txt
+          path: ${{ env.OPTIONS_FILE }}
+
